@@ -184,7 +184,7 @@ namespace STool.RabbitMQ
             }
         }
 
-        protected virtual async Task HandleIncomingMessageAsync(object sender, BasicDeliverEventArgs basicDeliverEventArgs)
+        public virtual async Task HandleIncomingMessageAsync(object sender, BasicDeliverEventArgs basicDeliverEventArgs)
         {
             try
             {

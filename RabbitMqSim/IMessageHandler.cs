@@ -13,7 +13,7 @@ namespace RabbitMqSim
         event LogDelegate LogHandler;
         event LogDelegate ReceivedLogHandler;
 
-        void Send(string text);
+        void Send(string text, bool isRpc);
         void Start();
 
         void Close();

@@ -1,4 +1,5 @@
 ﻿using RabbitMQ.Client;
+using RabbitMQ.Client.Events;
 using System;
 using System.Collections;
 using System.Collections.Concurrent;
@@ -49,29 +50,75 @@ namespace STool.RabbitMQ
             return Options.Settings.GetOrDefault(serverName).Producters.GetOrDefault(producterName);
         }
 
-        public void Publish(string exchangeName,string queueName, string routingKey, string message, string serverName = "Default", string producterName = "Default", string connectionName = "Default")
+        public AsyncEventingBasicConsumer? Publish(string exchangeName,string queueName, string routingKey, string message, bool isRpc, IBasicProperties? basicProperties = null, string serverName = "Default", string producterName = "Default", string connectionName = "Default")
         {
             var data = Encoding.UTF8.GetBytes(message);
-            Publish(exchangeName, queueName, routingKey, data, serverName: serverName, producterName: producterName, connectionName: connectionName);
+            return Publish(exchangeName, queueName, routingKey, data, isRpc, basicProperties: basicProperties, serverName: serverName, producterName: producterName, connectionName: connectionName);
         }
 
-        public void Publish(string exchangeName,string queueName, string routingKey, byte[] message, bool mandatory = false, IBasicProperties basicProperties = null, string serverName = "Default", string producterName = "Default", string connectionName = "Default")
+        public AsyncEventingBasicConsumer? Publish(string exchangeName,string queueName, string routingKey, byte[] message, bool isRpc, bool mandatory = false, IBasicProperties? basicProperties = null, string serverName = "Default", string producterName = "Default", string connectionName = "Default")
         {
+            AsyncEventingBasicConsumer? consumer = null;
+            string replyTo = null;
+            string correlationId = null;
+            if (basicProperties != null)
+            {
+                replyTo = basicProperties.ReplyTo;
+                correlationId = basicProperties.CorrelationId;
+            }
+
             try
             {
                 using (var channelAccessor = ChannelPool.Acquire(connectionName))
                 {
                     var config = GetProducterConfig(serverName, producterName);
 
-                    channelAccessor.Channel.ExchangeDeclare(exchange: exchangeName, type: config.Exchange.Type, config.Exchange.Durable, config.Exchange.AutoDelete, config.Exchange.Arguments);
-                    channelAccessor.Channel.QueueDeclare(queueName, config.Queue.Durable, config.Queue.Exclusive, config.Queue.AutoDelete, config.Queue.Arguments);
-                    channelAccessor.Channel.QueueBind(queueName, exchange: exchangeName, routingKey: routingKey, config.Queue.Arguments);
+                    if (string.IsNullOrWhiteSpace(replyTo))
+                    {
+                        if (isRpc)
+                        {
+                            // 发送 RPC 消息并监听回复
+                            // declare a server-named queue
+                            string replyQueueName = channelAccessor.Channel.QueueDeclare().QueueName;
+                            consumer = new AsyncEventingBasicConsumer(channelAccessor.Channel);
+                            channelAccessor.Channel.BasicConsume(consumer: consumer,
+                                                                 queue: replyQueueName,
+                                                                 autoAck: true);
+
+                            basicProperties = channelAccessor.Channel.CreateBasicProperties();
+                            basicProperties.ContentType = "text/plain";
+                            basicProperties.DeliveryMode = 0x01;
+                            basicProperties.Priority = 0x00;
+                            basicProperties.ReplyTo = replyQueueName;
+                            basicProperties.CorrelationId = Guid.NewGuid().ToString();
+                        }
+                        else
+                        {
+                            basicProperties = null;
+                        }
+                        
+                        channelAccessor.Channel.ExchangeDeclare(exchange: exchangeName, type: config.Exchange.Type, config.Exchange.Durable, config.Exchange.AutoDelete, config.Exchange.Arguments);
+                        channelAccessor.Channel.QueueDeclare(queueName, config.Queue.Durable, config.Queue.Exclusive, config.Queue.AutoDelete, config.Queue.Arguments);
+                        channelAccessor.Channel.QueueBind(queueName, exchange: exchangeName, routingKey: routingKey, config.Queue.Arguments);
+                    }
+                    else
+                    {
+                        // 需要回复 RPC 消息
+                        exchangeName = "";
+                        routingKey = replyTo;
+                        basicProperties = channelAccessor.Channel.CreateBasicProperties();
+                        basicProperties.ContentType = "text/plain";
+                        basicProperties.DeliveryMode = 0x01;
+                        basicProperties.Priority = 0x00;
+                        basicProperties.CorrelationId = correlationId;
+                    }
 
                     channelAccessor.Channel.BasicPublish(exchange: exchangeName,
                                              routingKey: routingKey,
                                              mandatory: mandatory,
                                              basicProperties: basicProperties,
                                              body: message);
+                    return consumer;
                 }
             }
             catch (Exception ex)
@@ -87,7 +134,7 @@ namespace STool.RabbitMQ
             {
                 Task<MessageResponse> task = new Task<MessageResponse>(() =>
                 {
-                    Publish(exchangeName, queueName,routingKey, message,serverName, producterName, connectionName);
+                    Publish(exchangeName: exchangeName, queueName: queueName, routingKey: routingKey, message: message, isRpc: false, serverName: serverName, producterName: producterName, connectionName: connectionName);
                     MessageResponse result = new MessageResponse();
                     _cache.TryAdd(transActionId, result);
                     int waitTime = 20;

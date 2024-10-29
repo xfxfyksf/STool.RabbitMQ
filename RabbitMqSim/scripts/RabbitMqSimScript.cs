@@ -1,6 +1,13 @@
 ﻿using RabbitMqSim;
+using RabbitMQ.Client;
+using RabbitMQ.Client.Events;
 using STool.Protocol;
 using STool.RabbitMQ;
+using System;
+using System.IO;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+using System.Collections.Generic;
 using System.Text;
 using System.Text.Json;
 using System.Xml;
@@ -39,11 +46,9 @@ public class RabbitMqSimScript : IMessageHandler
 
                 LogHandler?.Invoke($"Received : {message}");
                 ReceivedLogHandler?.Invoke(message);
-                Handle(message);
+                Handle(message, args.BasicProperties);
                 return Task.CompletedTask;
             });
-
-
         }
         catch (Exception ex)
         {
@@ -52,21 +57,23 @@ public class RabbitMqSimScript : IMessageHandler
 
     }
 
-
-    public void Handle(string message)
+    public void Handle(string message, IBasicProperties basicProperties)
     {
         try
         {
             XmlDocument xmlDocument = new XmlDocument();
             xmlDocument.LoadXml(message);
             var msgHeader = xmlDocument.GetHeader();
-
             switch (msgHeader.MESSAGENAME)
             {
                 case "EapMesLotInfoRequest":
                     {
                         var requestBody = xmlDocument.GetBody<LotRequestTemplete>();
-                        MessageFormat<LotReplyTemplete> replyMsg =
+                        if (requestBody == null)
+                        {
+                            LogHandler?.Invoke($"EapMesLotInfoRequest body get fail");
+                        }
+                        MessageFormat<LotReplyTempleteBody> replyMsg =
                           new("MesEapLotInfoRequestReply", new()
                           {
                               MACHINENAME = requestBody.MACHINENAME,
@@ -76,14 +83,14 @@ public class RabbitMqSimScript : IMessageHandler
                               OPERATORID = requestBody.OPERATORID,
                               BATCHID = "",
                               SLOTMAP = "3",
-                              PRODUCTLIST = new List<LotReplyTemplete.ProductInfo>()
+                              PRODUCTLIST = new List<LotReplyTempleteBody.Product>()
                               {
-                                  new LotReplyTemplete.ProductInfo()
+                                  new LotReplyTempleteBody.Product()
                                   {
                                       PRODUCTNAME="",
                                       LOTNO="",
                                       RECIPENAME="",
-                                      RECIPEPARAMLIST=new List<LotReplyTemplete.ProductInfo.RecipeParam>(){},
+                                      RECIPEPARAMLIST=new List<LotReplyTempleteBody.Product.RecipeParam>(){},
                                       MASKTITLE="",
                                       PRODUCTTYPE="",
                                       PRODUCTIONTYPE="",
@@ -98,14 +105,14 @@ public class RabbitMqSimScript : IMessageHandler
                               }
                           }) ;
 
-                        Publish(replyMsg, msgHeader.TRANSACTIONID);
+                        Publish(replyMsg, basicProperties, msgHeader.TRANSACTIONID, true);
                     }
                     break;
                 case "EapMesTrackInRequest":
                     {
                         //解析Body的对象需标注xmlroot为Body
-                        var requestBody = xmlDocument.GetBody<LotReplyTemplete>();
-                        MessageFormat<LotReplyTemplete> replyMsg =
+                        var requestBody = xmlDocument.GetBody<LotReplyTempleteBody>();
+                        MessageFormat<LotReplyTempleteBody> replyMsg =
                           new("MesEapTrackInRequestReply", new()
                           {
                               MACHINENAME = requestBody.MACHINENAME,
@@ -115,14 +122,14 @@ public class RabbitMqSimScript : IMessageHandler
                               OPERATORID = requestBody.OPERATORID,
                               BATCHID = "",
                               SLOTMAP = "3",
-                              PRODUCTLIST = new List<LotReplyTemplete.ProductInfo>()
+                              PRODUCTLIST = new List<LotReplyTempleteBody.Product>()
                               {
-                                  new LotReplyTemplete.ProductInfo()
+                                  new LotReplyTempleteBody.Product()
                                   {
                                       PRODUCTNAME="",
                                       LOTNO="",
                                       RECIPENAME="",
-                                      RECIPEPARAMLIST=new List<LotReplyTemplete.ProductInfo.RecipeParam>(){},
+                                      RECIPEPARAMLIST=new List<LotReplyTempleteBody.Product.RecipeParam>(){},
                                       MASKTITLE="",
                                       PRODUCTTYPE="",
                                       PRODUCTIONTYPE="",
@@ -136,14 +143,14 @@ public class RabbitMqSimScript : IMessageHandler
                                   }
                               }
                           });
-                        Publish(replyMsg, msgHeader.TRANSACTIONID);
+                        Publish(replyMsg, basicProperties, msgHeader.TRANSACTIONID, true);
                     }
                     break;
                 case "EapMesTrackOutRequest":
                     {
                         //解析Body的对象需标注xmlroot为Body
-                        var requestBody = xmlDocument.GetBody<LotReplyTemplete>();
-                        MessageFormat<LotReplyTemplete> replyMsg =
+                        var requestBody = xmlDocument.GetBody<LotReplyTempleteBody>();
+                        MessageFormat<LotReplyTempleteBody> replyMsg =
                           new("MesEapTrackOutRequestReply", new()
                           {
                               MACHINENAME = requestBody.MACHINENAME,
@@ -153,14 +160,14 @@ public class RabbitMqSimScript : IMessageHandler
                               OPERATORID = requestBody.OPERATORID,
                               BATCHID = "",
                               SLOTMAP = "3",
-                              PRODUCTLIST = new List<LotReplyTemplete.ProductInfo>()
+                              PRODUCTLIST = new List<LotReplyTempleteBody.Product>()
                               {
-                                  new LotReplyTemplete.ProductInfo()
+                                  new LotReplyTempleteBody.Product()
                                   {
                                       PRODUCTNAME="",
                                       LOTNO="",
                                       RECIPENAME="",
-                                      RECIPEPARAMLIST=new List<LotReplyTemplete.ProductInfo.RecipeParam>(){},
+                                      RECIPEPARAMLIST=new List<LotReplyTempleteBody.Product.RecipeParam>(){},
                                       MASKTITLE="",
                                       PRODUCTTYPE="",
                                       PRODUCTIONTYPE="",
@@ -174,7 +181,7 @@ public class RabbitMqSimScript : IMessageHandler
                                   }
                               }
                           });
-                        Publish(replyMsg, msgHeader.TRANSACTIONID);
+                        Publish(replyMsg, basicProperties, msgHeader.TRANSACTIONID, true);
                     }
                     break;
                 case "EapMesAreYouThereRequest":
@@ -186,7 +193,7 @@ public class RabbitMqSimScript : IMessageHandler
                           {
                               MACHINENAME = requestBody.MACHINENAME
                           });
-                        Publish(replyMsg, msgHeader.TRANSACTIONID);
+                        Publish(replyMsg, basicProperties, msgHeader.TRANSACTIONID, true);
                     }
                     break;
                 case "EapMesBufferSlotCheckRequest":
@@ -201,7 +208,7 @@ public class RabbitMqSimScript : IMessageHandler
                               CARRIERNAME= requestBody.CARRIERNAME,
                               BUFFERSLOT = requestBody.BUFFERSLOT,
                           });
-                        Publish(replyMsg, msgHeader.TRANSACTIONID);
+                        Publish(replyMsg, basicProperties, msgHeader.TRANSACTIONID, true);
                     }
                     break;
             }
@@ -213,9 +220,8 @@ public class RabbitMqSimScript : IMessageHandler
     }
 
 
-    public void Publish<T>(MessageFormat<T> message, string transActionId = "") where T : class, new()
+    public void Publish<T>(MessageFormat<T> message, IBasicProperties basicProperties, string transActionId = "", bool returnOk = true) where T : class, new()
     {
-        message.Header = new Header();
         message.Header.TRANSACTIONID = transActionId != "" ? transActionId : Guid.NewGuid().ToString("N");
         message.Header.TIMESTAMP = DateTime.Now.ToString("yyyyMMddHHmmssfff");
         message.Header.TTLCALLBACK = "";
@@ -226,11 +232,18 @@ public class RabbitMqSimScript : IMessageHandler
         message.Header.TARGETSUBJECTNAME = "";
         message.Header.FACTORYNAME = "";
 
+        if (!returnOk)
+        {
+            message.Return.RETURNCODE = 1;
+            message.Return.RETURNMESSAGE = "NG";
+        }
+
         var config = rabbitMqModule.GetProducterConfig();
 
         string msgStr = XmlHelper.XmlSerialize(message);
+        
+        rabbitMqModule.Publish(config.Exchange.ExchangeName, config.Queue.QueueName, config.RoutingKey, msgStr, false, basicProperties);
         LogHandler?.Invoke($"Publish : {msgStr}");
-        rabbitMqModule.Publish(config.Exchange.ExchangeName, config.Queue.QueueName, config.RoutingKey, msgStr);
     }
 
     public void Dispose()
@@ -238,12 +251,25 @@ public class RabbitMqSimScript : IMessageHandler
         GC.SuppressFinalize(this);
     }
 
-    public void Send(string msgStr)
+    public void Send(string msgStr, bool isRpc)
     {
         var config = rabbitMqModule.GetProducterConfig();
 
+        AsyncEventingBasicConsumer? consumer = rabbitMqModule.Publish(config.Exchange.ExchangeName, config.Queue.QueueName, config.RoutingKey, msgStr, true);
+        if (consumer != null)
+        {
+            consumer.Received += (model, args) =>
+            {
+                var body = args.Body.ToArray();
+                var message = Encoding.UTF8.GetString(body);
+
+                LogHandler?.Invoke($"Received : {message}");
+                ReceivedLogHandler?.Invoke(message);
+                Handle(message, args.BasicProperties);
+                return Task.CompletedTask;
+            };
+        }
         LogHandler?.Invoke($"Publish :\r\n {msgStr}");
-        rabbitMqModule.Publish(config.Exchange.ExchangeName, config.Queue.QueueName, config.RoutingKey, msgStr);
     }
 
     public void Close()
@@ -269,7 +295,7 @@ public class RabbitMqSimScript : IMessageHandler
 
     }
     [XmlRoot(ElementName = "Body")]
-    public class LotReplyTemplete
+    public class LotReplyTempleteBody
     {
         public string MACHINENAME { get; set; }
         public string PORTNAME { get; set; }
@@ -283,9 +309,9 @@ public class RabbitMqSimScript : IMessageHandler
 
         [XmlArray]
         [XmlArrayItem(ElementName = "PRODUCT")]
-        public List<ProductInfo> PRODUCTLIST { get; set; }
+        public List<Product> PRODUCTLIST { get; set; }
 
-        public class ProductInfo
+        public class Product
         {
             public string PRODUCTNAME { get; set; }
             public string LOTNO { get; set; }

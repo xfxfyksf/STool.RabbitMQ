@@ -186,7 +186,7 @@ namespace RabbitMqSim
 
         internal void Send(string text)
         {
-            messageHandler?.Send(text);
+            messageHandler?.Send(text, true);
         }
 
         class UnloadableAssembly : AssemblyLoadContext
