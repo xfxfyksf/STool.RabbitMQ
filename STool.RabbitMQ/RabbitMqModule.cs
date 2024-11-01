@@ -59,8 +59,8 @@ namespace STool.RabbitMQ
         public AsyncEventingBasicConsumer? Publish(string exchangeName,string queueName, string routingKey, byte[] message, bool isRpc, bool mandatory = false, IBasicProperties? basicProperties = null, string serverName = "Default", string producterName = "Default", string connectionName = "Default")
         {
             AsyncEventingBasicConsumer? consumer = null;
-            string replyTo = null;
-            string correlationId = null;
+            string replyTo = string.Empty;
+            string correlationId = string.Empty;
             if (basicProperties != null)
             {
                 replyTo = basicProperties.ReplyTo;
