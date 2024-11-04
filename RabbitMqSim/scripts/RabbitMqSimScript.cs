@@ -267,7 +267,7 @@ public class RabbitMqSimScript : IMessageHandler
                 ReceivedLogHandler?.Invoke(message);
 
                 // 若 ConsumerTag 为 RPC Queue 的，收到回复消息后取消消费
-                ((AsyncEventingBasicConsumer)model).Model.BasicCancel(args.ConsumerTag);
+                ((AsyncEventingBasicConsumer)model).Model.BasicCancelNoWait(args.ConsumerTag);
 
                 return Task.CompletedTask;
             };

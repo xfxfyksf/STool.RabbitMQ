@@ -81,7 +81,7 @@ namespace STool.RabbitMQ
                             // declare a server-named queue
                             string replyQueueName = channelAccessor.Channel.QueueDeclare().QueueName;
                             consumer = new AsyncEventingBasicConsumer(channelAccessor.Channel);
-                            channelAccessor.Channel.BasicConsume(consumer: consumer,
+                            string consumerTag = channelAccessor.Channel.BasicConsume(consumer: consumer,
                                                                  queue: replyQueueName,
                                                                  autoAck: true);
 
@@ -91,6 +91,16 @@ namespace STool.RabbitMQ
                             basicProperties.Priority = 0x00;
                             basicProperties.ReplyTo = replyQueueName;
                             basicProperties.CorrelationId = Guid.NewGuid().ToString();
+
+                            // 超时取消消费
+                            Task.Run(() =>
+                            {
+                                Task.Delay(TimeSpan.FromSeconds(100)).Wait();
+                                if (!string.IsNullOrWhiteSpace(consumerTag))
+                                {
+                                    channelAccessor.Channel.BasicCancelNoWait(consumerTag);
+                                }
+                            });
                         }
                         else
                         {
