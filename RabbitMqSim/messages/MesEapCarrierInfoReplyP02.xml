@@ -23,7 +23,7 @@
         <MACHINETYPE>Metrology</MACHINETYPE>
         <PORTNAME>P02</PORTNAME>
         <FACTORYNAME>GZNJFD01</FACTORYNAME>
-        <SLOTMAP>1000010000000000000000000</SLOTMAP>
+        <SLOTMAP>1100000000000000000000000</SLOTMAP>
         <CARRIERNAME>P259003</CARRIERNAME>
         <PAIRCARRIERNAME>K256011</PAIRCARRIERNAME>
         <ISFREEZED/>
@@ -56,8 +56,8 @@
                         <DESTINATION/>
                     </SLOTINFO>
                     <SLOTINFO>
-                        <SLOTID>6</SLOTID>
-                        <WAFERID>15B0006P-06</WAFERID>
+                        <SLOTID>2</SLOTID>
+                        <WAFERID>15B0006P-02</WAFERID>
                         <T7CODE>D24S68-16-D2</T7CODE>
                         <SELECTED>Y</SELECTED>
                         <LOTNAME>15B0006P</LOTNAME>
