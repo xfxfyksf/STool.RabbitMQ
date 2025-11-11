@@ -1,4 +1,4 @@
-<?xml version="1.1" encoding="UTF-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <Message>
     <Header>
         <TRANSACTIONID>43938cea1c224da68ce1a112f58a8c1a</TRANSACTIONID>
@@ -25,7 +25,7 @@
         <FACTORYNAME>GZNJFD01</FACTORYNAME>
         <SLOTMAP>1100000000000000000000000</SLOTMAP>
         <CARRIERNAME>P259003</CARRIERNAME>
-        <PAIRCARRIERNAME>K256011</PAIRCARRIERNAME>
+        <PAIRCARRIER>K256011</PAIRCARRIER>
         <ISFREEZED/>
         <GROUPID/>
         <ISEMPTY/>

@@ -1,18 +1,17 @@
-﻿using RabbitMQ.Client;
+﻿using RabbitMqSim;
+using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
-using RabbitMqSim;
 using STool.Protocol;
 using STool.RabbitMQ;
 using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Text;
-using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.Collections.Generic;
+using System.Text;
+using System.Text.Json;
 using System.Xml;
 using System.Xml.Serialization;
-using static RabbitMqSimScript.LotReplyTempleteBody.Product;
 
 public class RabbitMqSimScript : IMessageHandler
 {
@@ -287,44 +286,6 @@ public class RabbitMqSimScript : IMessageHandler
     }
 
     #region message body
-    [XmlRoot(ElementName = "Body")]
-    public class EapMesCarrierInfoRequestBody
-    {
-        public string FACTORYNAME { get; set; }
-        public string MACHINENAME { get; set; }
-        public string PORTNAME { get; set; }
-        public string CARRIERNAME { get; set; }
-    }
-    [XmlRoot(ElementName = "Body")]
-    public class MesEapCarrierInfoReplyBody
-    {
-        public string FACTORYNAME { get; set; }
-        public string MACHINENAME { get; set; }
-        public string MACHINETYPE { get; set; }
-        public string PORTNAME { get; set; }
-        public string CARRIERNAME { get; set; }
-        public string PAIRCARRIER { get; set; }
-        public string ISFREEZED { get; set; }
-        public string GROUPID { get; set; }
-        public string ISEMPTY { get; set; }
-        public string GROUPARRIVED { get; set; }
-        public string JOBTYPE { get; set; }
-        public string JOBUSETYPE { get; set; }
-        public string PURGERECIPE { get; set; }
-
-        [XmlArray]
-        [XmlArrayItem(ElementName = "LOTINFO")]
-        public List<LotInfo> LOTINFOLIST { get; set; }
-
-        public class LotInfo
-        {
-            public string LOTNAME { get; set; }
-            public string PJID { get; set; }
-            public string CJID { get; set; }
-        }
-    }
-
-    // Nrm Body
     [XmlRoot(ElementName ="Body")]
     public class LotRequestTemplete
     {
